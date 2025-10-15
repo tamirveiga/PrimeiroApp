@@ -1,42 +1,53 @@
 package com.example.primeiroapp
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.*
+import com.example.primeiroapp.data.PostagemDatabase
+import com.example.primeiroapp.data.RepositorioPost
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Aplicativo() {
     val navController = rememberNavController()
-    val postagens = RepositorioPost.postagens
+
+    // Inicializa o banco e o repositório
+    val contexto = androidx.compose.ui.platform.LocalContext.current
+    val database = remember { PostagemDatabase.getDatabase(contexto) }
+    val repositorio = remember { RepositorioPost(database.postagemDao()) }
+
+    // Observa as postagens em tempo real (LiveData)
+    val postagens by repositorio.postagens.observeAsState(emptyList())
 
     Scaffold(
-        containerColor = Color(0xFF0D1117),
         bottomBar = { BarraInferior(navController) }
-    ) { padding ->
+    ) { paddingValues ->
         NavHost(
             navController = navController,
             startDestination = Tela.Inicio.name,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(paddingValues)
         ) {
             composable(Tela.Inicio.name) {
-                TelaInicial(navController, postagens)
+                TelaInicial(navController, repositorio, postagens)
             }
-            composable(Tela.Configuracoes.name) {
-                TelaConfiguracoes()
+            composable(Tela.NovaPostagem.name) {
+                TelaNovaPostagem(navController, repositorio)
             }
             composable(Tela.Conta.name) {
                 TelaConta()
             }
-            composable(Tela.NovoTweet.name) {
-                TelaNovoTweet(navController)
+            composable(Tela.Configuracoes.name) {
+                TelaConfiguracoes()
             }
         }
     }
+}
+
+enum class Tela {
+    Inicio,
+    NovaPostagem,
+    Conta,
+    Configuracoes
 }
