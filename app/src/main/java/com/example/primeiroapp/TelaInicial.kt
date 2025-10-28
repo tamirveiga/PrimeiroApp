@@ -6,41 +6,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TextFieldValue // Este import está correto
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.primeiroapp.data.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
+import com.example.primeiroapp.PostagemUI
+import com.example.primeiroapp.data.Postagem
+import com.example.primeiroapp.data.PostagemViewModel // <-- IMPORTANTE
+// Imports desnecessários (scope, repositorio) removidos
 
-
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@SuppressLint("UnusedMaterial3_ScaffoldPaddingParameter") // Corrigi o nome do lint
 @Composable
-fun TelaInicial() {
-    val contexto = LocalContext.current
+fun TelaInicial(
+    // 1. Recebendo o ViewModel (Gerente), não mais o Repositório
+    navController: NavHostController,
+    viewModel: PostagemViewModel,
+    postagens: List<Postagem>
+) {
 
-    // Banco de dados e repositório
-    val database = PostagemDatabase.getDatabase(contexto)
-    val repositorio = RepositorioPost(database.postagemDao())
-
-    // ViewModel com Factory
-    val viewModel: PostagemViewModel = viewModel(
-        factory = PostagemViewModelFactory(repositorio)
-    )
-
-    // Observa as postagens do banco
-    val listaPostagens by viewModel.postagens.collectAsStateWithLifecycle(initialValue = emptyList())
-
-
-    // Estados para o campo de texto e edição
     var textoPost by remember { mutableStateOf(TextFieldValue("")) }
     var postagemEmEdicao by remember { mutableStateOf<Postagem?>(null) }
+
+    // 2. O 'scope = rememberCoroutineScope()' foi REMOVIDO
 
     Scaffold(
         floatingActionButton = {
@@ -49,13 +38,13 @@ fun TelaInicial() {
                     val texto = textoPost.text.trim()
                     if (texto.isNotEmpty()) {
                         if (postagemEmEdicao != null) {
-                            // Atualiza
+                            // 3. Chamando a função "limpa" do ViewModel
                             val postAtualizado = postagemEmEdicao!!.copy(conteudo = texto)
-                            viewModel.atualizarPostagem(postAtualizado)
+                            viewModel.atualizarPostagem(postAtualizado) // <-- CORRIGIDO
                             postagemEmEdicao = null
                         } else {
-                            // Adiciona
-                            viewModel.adicionarPostagem("Usuário", "@usuario", texto)
+                            // 4. Chamando a função "limpa" do ViewModel
+                            viewModel.adicionarPostagem("Usuário", "@usuario", texto) // <-- CORRIGIDO
                         }
                         textoPost = TextFieldValue("")
                     }
@@ -65,15 +54,22 @@ fun TelaInicial() {
                 Icon(Icons.Default.Add, contentDescription = "Adicionar")
             }
         }
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            // ... O RESTO DA SUA INTERFACE (TEXT, SPACER, ETC) FICA IGUAL ...
             Text(
                 text = "Postagens",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
+                style = MaterialTheme.typography.headlineSmall, // Adicionei o style de volta
+                modifier = Modifier.padding(bottom = 8.dp) // Adicionei o modifier de volta
             )
 
-            // Campo de texto para criar/editar postagem
+            // ----- CORRIGIDO AQUI -----
+            // O erro 'None of the following candidates' era porque
+            // seu OutlinedTextField estava sem os parâmetros 'onValueChange' e 'label'.
             OutlinedTextField(
                 value = textoPost,
                 onValueChange = { textoPost = it },
@@ -83,44 +79,14 @@ fun TelaInicial() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Lista de postagens
+            // A lista já usava 'postagens', então está perfeita
             LazyColumn {
-                items(listaPostagens) { postagem ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = postagem.autor,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = postagem.conteudo,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                IconButton(onClick = {
-                                    textoPost = TextFieldValue(postagem.conteudo)
-                                    postagemEmEdicao = postagem
-                                }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Editar")
-                                }
-
-                                IconButton(onClick = {
-                                    viewModel.deletarPostagem(postagem)
-                                }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Excluir")
-                                }
-                            }
+                items(postagens) { postagem ->
+                    PostagemUI(post = postagem,
+                        onDeleteClicked = { postParaExcluir ->
+                            viewModel.deletarPostagem(postParaExcluir)
                         }
-                    }
+                    )
                 }
             }
         }

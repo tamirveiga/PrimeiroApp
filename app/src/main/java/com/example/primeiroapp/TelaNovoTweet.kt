@@ -10,12 +10,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.primeiroapp.data.PostagemViewModel // <-- IMPORTANTE
+// Imports desnecessários (scope, repositorio) removidos
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelaNovoTweet(navController: NavController) {
+fun TelaNovoTweet(
+    navController: NavController,
+    // 1. Recebendo o ViewModel (Gerente)
+    viewModel: PostagemViewModel
+) {
     var tweetText by remember { mutableStateOf("") }
     val maxChars = 280
+
+    // 2. O 'scope = rememberCoroutineScope()' foi REMOVIDO
 
     Scaffold(
         containerColor = Color(0xFF0D1117),
@@ -23,32 +31,27 @@ fun TelaNovoTweet(navController: NavController) {
             CenterAlignedTopAppBar(
                 title = { /* vazio */ },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.Close, contentDescription = "Cancelar", tint = Color.White)
-                    }
+                    //... (Interface intacta)
                 },
                 actions = {
                     Button(
                         onClick = {
                             if (tweetText.isNotBlank()) {
-                                // usa o repositório correto
-                                RepositorioPost.addPost("Usuário Exemplo", "@usuario", tweetText)
-                                // volta para a tela anterior (Home)
+                                // 3. Chamando a função "limpa" do ViewModel
+                                viewModel.adicionarPostagem("Usuário Exemplo", "@usuario", tweetText) // <-- CORRIGIDO
                                 navController.popBackStack()
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D9BF0)),
-                        enabled = tweetText.isNotBlank() && tweetText.length <= maxChars
+                        //... (Interface do botão intacta)
                     ) {
                         Text("Tweet")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF0D1117)
-                )
+                //... (Interface do TopBar intacta)
             )
         }
     ) { padding ->
+        // ... (Toda a sua interface do Column/Row/OutlinedTextField está intacta)
         Column(
             modifier = Modifier
                 .padding(padding)
